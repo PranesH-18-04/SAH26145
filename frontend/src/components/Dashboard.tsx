@@ -5,6 +5,7 @@ import LiveTrafficTable from './LiveTrafficTable';
 import AIExplanationPanel from './AIExplanationPanel';
 import AnalyticsCharts from './AnalyticsCharts';
 import ModelPerformancePanel from './ModelPerformancePanel';
+import ConfidenceDecayTracker from './ConfidenceDecayTracker';
 
 export default function Dashboard() {
   const wsUrl = import.meta.env.VITE_API_URL.replace(/^http/, "ws");
@@ -72,12 +73,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right Column: AI Explainability (1/3 width) */}
+        {/* Right Column: AI Explainability & Models (1/3 width) */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass-panel p-4 min-h-[400px]">
             <h2 className="text-lg font-semibold mb-4">AI Insight & Explainability</h2>
             <AIExplanationPanel alert={selectedAlert} />
           </div>
+          <ConfidenceDecayTracker alerts={alerts} />
           <ModelPerformancePanel />
         </div>
       </div>

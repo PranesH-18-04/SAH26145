@@ -9,6 +9,10 @@ export interface FeatureContribution {
 export interface ThreatAnalysis {
   packet_id: string;
   threat_score: number;
+  raw_threat_score: number;
+  decay_factor: number;
+  occurrence_count: number;
+  signature: string;
   severity: 'LOG_ONLY' | 'LOW' | 'MEDIUM' | 'CRITICAL';
   category: 'Safe' | 'Suspicious' | 'Malicious';
   threat_type?: string;
@@ -74,6 +78,10 @@ export function useWebSocket(url: string, httpUrl: string) {
             analysis: {
               packet_id: row.id,
               threat_score: row.threat_score,
+              raw_threat_score: row.raw_threat_score || row.threat_score,
+              decay_factor: row.decay_factor || 1.0,
+              occurrence_count: row.occurrence_count || 1,
+              signature: row.signature || "unknown",
               severity: row.severity,
               category: row.category,
               threat_type: row.threat_type,

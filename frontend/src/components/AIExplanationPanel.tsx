@@ -76,6 +76,21 @@ export default function AIExplanationPanel({ alert }: Props) {
           </div>
         )}
 
+        {/* Confidence Decay Tracker Badge */}
+        {analysis.decay_factor < 1.0 && (
+          <div className="bg-gray-800/50 p-3 rounded border border-gray-700 flex flex-col gap-2">
+            <h4 className="text-xs font-semibold text-gray-400">Exponential Frequency Decay Applied</h4>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-400">Raw Model Confidence:</span>
+              <span className="text-gray-200 font-mono">{(analysis.raw_threat_score * 100).toFixed(1)}%</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-400">Decayed Confidence (Occurrence #{analysis.occurrence_count}):</span>
+              <span className="text-signal-teal font-bold font-mono">{(analysis.threat_score * 100).toFixed(1)}%</span>
+            </div>
+          </div>
+        )}
+
         {/* Natural Language Explanation */}
         <div>
           <h4 className="text-sm font-semibold text-gray-300 mb-2">Analysis Rationale</h4>
