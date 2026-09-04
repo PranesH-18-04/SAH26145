@@ -79,7 +79,7 @@ export default function AIExplanationPanel({ alert }: Props) {
         {/* Natural Language Explanation */}
         <div>
           <h4 className="text-sm font-semibold text-gray-300 mb-2">Analysis Rationale</h4>
-          <p className="text-sm text-gray-400 leading-relaxed bg-gray-800/20 p-3 rounded border border-gray-800/50">
+          <p className="text-sm text-gray-400 leading-relaxed bg-gray-800/20 p-3 rounded border border-gray-800/50 whitespace-pre-wrap">
             {analysis.explanation}
           </p>
         </div>

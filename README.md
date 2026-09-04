@@ -10,22 +10,16 @@ and confidence-decay mechanism to reduce false positives over time.
 
 ## Architecture
 
-Synthetic unidirectional traffic (simulated flow data)
-|
-v
-Feature extraction (packet size, flow duration, port, protocol, flags)
-|
-v
-ML Engine: RandomForestClassifier (primary) + IsolationForest (secondary anomaly signal)
-|
-v
-Explainability layer + Confidence-decay (reduces repeated false positives)
-|
-v
-FastAPI backend — REST endpoints + WebSocket alert stream
-|
-v
-React (Vite + Tailwind) dashboard — live traffic table, analytics charts, AI summary panel
+```mermaid
+graph TD
+    A[Network Tap / Mirrored Port] --> B[Data Diode]
+    B --> C[PCAP Ingestion & Feature Extractor (Scapy)]
+    C --> D[ML Engine: RandomForest + IsolationForest]
+    D --> E[Explainability Layer & Confidence Decay]
+    E --> F[FastAPI REST & WebSocket Server]
+    F --> G[SQLite Persistence]
+    F --> H[React / Vite SOC Dashboard]
+```
 
 ## Repository structure
 
@@ -68,19 +62,18 @@ SAH26/
 
 - Real trained ML pipeline (RandomForest + IsolationForest) on synthetic
   labeled flow data — not rule-based mocks
-- Explainability layer generating plain-language reasons for each alert
+- Explainability layer generating plain-language reasons and SHAP-style contributions for each alert
 - Confidence-decay logic to dampen repeated benign anomalies over time
+- PCAP Ingestion Endpoint via `scapy` for real packet analysis
+- SQLite persistence layer for alert history
 - FastAPI backend with REST endpoints + live WebSocket alert streaming
-- React dashboard: live traffic table, severity badges, analytics charts,
-  AI explanation panel
-- Model evaluation report with real precision/recall/F1/confusion matrix
+- React dashboard: live traffic table, Severity-based alerts, historical DB load, and simulated attack injections
+- Model evaluation report with real precision/recall/F1/confusion matrix rendered in UI
 
 ## What's NOT implemented yet
 
-- Real packet capture / integration with actual data-diode hardware
-- Persistent database storage (currently in-memory / synthetic replay)
-- Authentication / role-based access control on the dashboard
-- Production-scale throughput benchmarking beyond estimates in `docs/feasibility.md`
+- Full JWT-backed Backend Authentication (Role-based access is currently mocked in UI for demo purposes)
+- Production-scale throughput benchmarking beyond estimates in `docs/feasibility.md` (Would require Kafka ingestion queue instead of direct FastAPI processing)
 
 ## How to run locally
 

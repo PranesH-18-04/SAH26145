@@ -163,6 +163,9 @@ class MLEngine:
         # Generate Explanation
         explanation = self._generate_explanation(category, threat_type_str, packet_dict)
         
+        if final_confidence < base_threat_score:
+            explanation += f"\n\n[Confidence Decay Triggered] Alert suppressed: repeated anomalies detected from {packet_dict.get('source_ip')}. Confidence decayed from {base_threat_score*100:.1f}% to {final_confidence*100:.1f}%."
+
         # Calculate Feature Contributions (SHAP proxy)
         feature_contributions = []
         if category != "Safe":

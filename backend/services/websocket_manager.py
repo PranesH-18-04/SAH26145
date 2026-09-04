@@ -9,6 +9,7 @@ from typing import List, Dict
 
 from models.schemas import TrafficPacket, ThreatAnalysis, Alert
 from services.ml_engine import ml_engine
+from services.database import save_alert
 
 class ConnectionManager:
     def __init__(self):
@@ -32,11 +33,12 @@ manager = ConnectionManager()
 
 def generate_mock_packet() -> dict:
     """Simulates unidirectional network traffic adhering to strict realism constraints."""
-    # Use only RFC 1918 (Internal) and RFC 5737 (TEST-NET-1) to avoid leaking real IPs
+    # Realistic internal ranges (RFC 1918) and plausible external actors
     internal_ips = [f"10.0.5.{random.randint(1, 254)}" for _ in range(4)]
-    test_net_ips = [f"192.0.2.{random.randint(1, 254)}" for _ in range(2)]
+    external_ips = [f"45.33.{random.randint(1, 254)}.{random.randint(1, 254)}", 
+                    f"185.12.{random.randint(1, 254)}.{random.randint(1, 254)}"]
     
-    source_ip = random.choice(internal_ips + test_net_ips)
+    source_ip = random.choice(internal_ips + external_ips)
     dest_ip = "10.0.1.100" # Internal server
     
     dest_port = random.choice([80, 443, 22, 53, 3306])
@@ -106,6 +108,8 @@ async def traffic_generator():
             analysis=analysis_obj,
             acknowledged=False
         )
+        
+        save_alert(alert_obj.model_dump())
         
         await manager.broadcast(alert_obj.model_dump_json())
         await asyncio.sleep(random.uniform(0.2, 1.5))

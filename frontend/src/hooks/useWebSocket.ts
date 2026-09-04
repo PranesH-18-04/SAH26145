@@ -45,11 +45,47 @@ export interface Alert {
   audit_trail: AuditLogEntry[];
 }
 
-export function useWebSocket(url: string) {
+export function useWebSocket(url: string, httpUrl: string) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    // Load persisted history first
+    fetch(`${httpUrl}/api/v1/history`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Map DB rows back to Alert objects
+          const parsedHistory = data.map((row: any) => ({
+            id: row.id,
+            packet: {
+              timestamp_epoch: row.timestamp_epoch,
+              timestamp_formatted: row.timestamp_formatted,
+              source_ip: row.source_ip,
+              dest_ip: row.dest_ip,
+              dest_port: row.dest_port,
+              protocol: row.protocol,
+              packet_size: row.packet_size,
+              flow_duration: 0,
+              flags: "-"
+            },
+            analysis: {
+              threat_score: row.threat_score,
+              severity: row.severity,
+              category: row.category,
+              threat_type: row.threat_type,
+              explanation: row.explanation,
+              feature_contributions: []
+            },
+            acknowledged: false,
+            status: 'NEW',
+            audit_trail: []
+          }));
+          setAlerts(parsedHistory);
+        }
+      })
+      .catch(err => console.error('Failed to load history', err));
+
     const ws = new WebSocket(url);
 
     ws.onopen = () => {

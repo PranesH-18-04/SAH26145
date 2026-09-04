@@ -4,10 +4,12 @@ import { useWebSocket, Alert } from '../hooks/useWebSocket';
 import LiveTrafficTable from './LiveTrafficTable';
 import AIExplanationPanel from './AIExplanationPanel';
 import AnalyticsCharts from './AnalyticsCharts';
+import ModelPerformancePanel from './ModelPerformancePanel';
 
 export default function Dashboard() {
   const wsUrl = import.meta.env.VITE_API_URL.replace(/^http/, "ws");
-  const { alerts, isConnected } = useWebSocket(`${wsUrl}/ws/traffic`);
+  const httpUrl = import.meta.env.VITE_API_URL.replace(/^ws/, "http");
+  const { alerts, isConnected } = useWebSocket(`${wsUrl}/ws/traffic`, httpUrl);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   // Statistics
@@ -37,12 +39,14 @@ export default function Dashboard() {
           value={suspiciousCount.toLocaleString()}
           color={suspiciousCount > 0 ? "border-threat-amber" : "border-gray-800"}
         />
-        <StatCard
-          icon={<Zap className="text-gray-400" />}
-          label="Engine Latency"
-          value="14 ms"
-          color="border-gray-800/50"
-        />
+        <div className="glass-panel p-4 flex flex-col justify-center border-l-4 border-gray-600 gap-2">
+          <div className="text-xs text-gray-400 font-mono mb-1">Simulate Attack (Demo)</div>
+          <div className="flex gap-2">
+            <button onClick={() => fetch(`${wsUrl.replace('ws', 'http')}/api/v1/traffic/simulate`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({attack_type: 'DDoS'}) })} className="flex-1 text-[10px] bg-gray-800 hover:bg-threat-red/20 border border-gray-700 rounded py-1 transition-colors">DDoS</button>
+            <button onClick={() => fetch(`${wsUrl.replace('ws', 'http')}/api/v1/traffic/simulate`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({attack_type: 'Exfiltration'}) })} className="flex-1 text-[10px] bg-gray-800 hover:bg-threat-red/20 border border-gray-700 rounded py-1 transition-colors">Exfil</button>
+            <button onClick={() => fetch(`${wsUrl.replace('ws', 'http')}/api/v1/traffic/simulate`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({attack_type: 'Tunneling'}) })} className="flex-1 text-[10px] bg-gray-800 hover:bg-threat-red/20 border border-gray-700 rounded py-1 transition-colors">Tunnel</button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -69,11 +73,12 @@ export default function Dashboard() {
         </div>
 
         {/* Right Column: AI Explainability (1/3 width) */}
-        <div className="lg:col-span-1">
-          <div className="glass-panel p-4 h-full min-h-[724px]">
+        <div className="lg:col-span-1 space-y-6">
+          <div className="glass-panel p-4 min-h-[400px]">
             <h2 className="text-lg font-semibold mb-4">AI Insight & Explainability</h2>
             <AIExplanationPanel alert={selectedAlert} />
           </div>
+          <ModelPerformancePanel />
         </div>
       </div>
     </div>

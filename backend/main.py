@@ -3,7 +3,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from api.v1.routes import traffic, alerts
+from api.v1.routes import traffic, alerts, pcap, history
 from services.websocket_manager import manager, traffic_generator
 
 app = FastAPI(title="SIH26145 AI Threat Detection Backend")
@@ -18,6 +18,8 @@ app.add_middleware(
 
 app.include_router(traffic.router, prefix="/api/v1/traffic", tags=["traffic"])
 app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["alerts"])
+app.include_router(pcap.router, prefix="/api/v1/pcap", tags=["pcap"])
+app.include_router(history.router, prefix="/api/v1/history", tags=["history"])
 
 @app.on_event("startup")
 async def startup_event():
