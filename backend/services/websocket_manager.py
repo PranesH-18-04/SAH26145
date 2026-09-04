@@ -2,6 +2,7 @@ import asyncio
 import json
 import random
 import uuid
+import time
 from datetime import datetime
 from fastapi import WebSocket
 from typing import List, Dict
@@ -30,36 +31,54 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 def generate_mock_packet() -> dict:
-    """Simulates unidirectional network traffic (e.g., from a data diode)"""
-    ips = [f"192.168.1.{random.randint(1, 255)}" for _ in range(5)]
-    ips.append(f"10.0.0.{random.randint(1, 255)}") # external
+    """Simulates unidirectional network traffic adhering to strict realism constraints."""
+    # Use only RFC 1918 (Internal) and RFC 5737 (TEST-NET-1) to avoid leaking real IPs
+    internal_ips = [f"10.0.5.{random.randint(1, 254)}" for _ in range(4)]
+    test_net_ips = [f"192.0.2.{random.randint(1, 254)}" for _ in range(2)]
     
-    source_ip = random.choice(ips)
-    dest_ip = "192.168.1.100" # Internal server
+    source_ip = random.choice(internal_ips + test_net_ips)
+    dest_ip = "10.0.1.100" # Internal server
     
-    protocols = ["TCP", "UDP", "ICMP"]
-    protocol = random.choices(protocols, weights=[0.7, 0.2, 0.1])[0]
+    dest_port = random.choice([80, 443, 22, 53, 3306])
+    
+    # Strict Protocol and Flag Realism
+    if dest_port == 53:
+        protocol = "UDP"
+        flags = "-"
+    elif dest_port == 22:
+        protocol = "TCP"
+        flags = random.choice(["PSH,ACK", "ACK", "SYN"])
+    elif dest_port in [80, 443, 3306]:
+        protocol = "TCP"
+        flags = random.choice(["ACK", "SYN", "FIN,ACK", "RST", "PSH,ACK"])
+    else:
+        protocol = "UDP"
+        flags = "-"
     
     packet_size = random.randint(40, 1500)
-    # Introduce anomalies randomly
     if random.random() < 0.05:
-        packet_size = random.randint(1500, 65000)
+        packet_size = random.randint(1500, 45000)
         
     flow_duration = random.uniform(0.001, 5.0)
     if random.random() < 0.05:
         flow_duration = random.uniform(10.0, 30.0)
         
+    epoch = time.time()
+    # Format: HH:MM:SS.mmm
+    formatted_time = datetime.fromtimestamp(epoch).strftime("%H:%M:%S.%f")[:-3]
+        
     return {
         "id": str(uuid.uuid4()),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp_epoch": epoch,
+        "timestamp_formatted": formatted_time,
         "source_ip": source_ip,
         "dest_ip": dest_ip,
         "source_port": random.randint(1024, 65535),
-        "dest_port": random.choice([80, 443, 22, 53, 3306]),
+        "dest_port": dest_port,
         "protocol": protocol,
         "packet_size": packet_size,
         "flow_duration": flow_duration,
-        "flags": random.choice(["ACK", "SYN", "FIN", "RST", "PSH,ACK"])
+        "flags": flags
     }
 
 async def traffic_generator():
@@ -68,16 +87,17 @@ async def traffic_generator():
         packet_dict = generate_mock_packet()
         
         # Analyze packet through ML Engine
-        threat_score, category, threat_type, explanation, confidence = ml_engine.analyze_packet(packet_dict)
+        analysis_result = ml_engine.analyze_packet(packet_dict)
         
         packet_obj = TrafficPacket(**packet_dict)
         analysis_obj = ThreatAnalysis(
             packet_id=packet_dict['id'],
-            threat_score=threat_score,
-            category=category,
-            threat_type=threat_type,
-            explanation=explanation,
-            confidence=confidence
+            threat_score=analysis_result['threat_score'],
+            severity=analysis_result['severity'],
+            category=analysis_result['category'],
+            threat_type=analysis_result['threat_type'],
+            explanation=analysis_result['explanation'],
+            feature_contributions=analysis_result['feature_contributions']
         )
         
         alert_obj = Alert(
@@ -87,15 +107,5 @@ async def traffic_generator():
             acknowledged=False
         )
         
-        # Populate mocked alerts_db
-        from api.v1.routes.alerts import alerts_db
-        alerts_db.append(alert_obj.model_dump())
-        if len(alerts_db) > 50:
-            alerts_db.pop(0)
-        
-        # Broadcast all traffic to the UI so we can see the live feed
-        # In a real scenario, we might only broadcast Malicious/Suspicious or 
-        # send normal traffic at a sampled rate.
         await manager.broadcast(alert_obj.model_dump_json())
-        
         await asyncio.sleep(random.uniform(0.2, 1.5))

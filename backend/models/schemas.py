@@ -1,26 +1,46 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from enum import Enum
+
+class ProtocolEnum(str, Enum):
+    TCP = "TCP"
+    UDP = "UDP"
+    ICMP = "ICMP"
+
+class SeverityLevel(str, Enum):
+    LOG_ONLY = "LOG_ONLY"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    CRITICAL = "CRITICAL"
 
 class TrafficPacket(BaseModel):
     id: str
-    timestamp: datetime
+    timestamp_epoch: float
+    timestamp_formatted: str
     source_ip: str
     dest_ip: str
     source_port: int
     dest_port: int
-    protocol: str
+    protocol: ProtocolEnum
     packet_size: int
     flow_duration: float
     flags: str
 
+class FeatureContribution(BaseModel):
+    feature_name: str
+    contribution_score: float
+    description: str
+
 class ThreatAnalysis(BaseModel):
     packet_id: str
     threat_score: float
-    category: str # "Safe", "Suspicious", "Malicious"
-    threat_type: Optional[str] = None # e.g., "DDoS", "Data Exfiltration"
-    explanation: Optional[str] = None # Explainability layer
-    confidence: float # Confidence of the prediction
+    severity: SeverityLevel
+    category: str
+    threat_type: Optional[str] = None
+    explanation: str
+    model_used: str = "Random Forest Classifier + Isolation Forest Hybrid"
+    feature_contributions: List[FeatureContribution]
 
 class Alert(BaseModel):
     id: str
