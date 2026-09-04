@@ -1,102 +1,112 @@
 import { Alert } from '../hooks/useWebSocket';
-import { ShieldAlert, Info, TrendingDown, Target } from 'lucide-react';
+import { ShieldAlert, Info, TrendingDown, Target, Activity } from 'lucide-react';
 
 interface Props {
-  selectedAlert: Alert | null;
+  alert: Alert | null;
 }
 
-export default function AIExplanationPanel({ selectedAlert }: Props) {
-  if (!selectedAlert) {
+export default function AIExplanationPanel({ alert }: Props) {
+  if (!alert) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-500 p-6 text-center border-2 border-dashed border-gray-800 rounded-lg">
-        <Target size={48} className="mb-4 opacity-50" />
-        <p>Select a flow from the live traffic table to view the AI explainability report.</p>
+      <div className="h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900/50 rounded-lg border border-gray-800">
+        <Target className="mb-4 opacity-50" size={48} />
+        <p>Select a packet to view AI explanation</p>
       </div>
     );
   }
 
-  const { packet, analysis } = selectedAlert;
-
-  const isMalicious = analysis.category === 'Malicious';
-  const isSuspicious = analysis.category === 'Suspicious';
-  const isSafe = analysis.category === 'Safe';
+  const { analysis, packet } = alert;
+  const isMalicious = analysis.severity === 'CRITICAL';
+  const isSuspicious = analysis.severity === 'MEDIUM' || analysis.severity === 'LOW';
 
   return (
-    <div className="space-y-6">
-      {/* Overview Banner */}
-      <div className={`p-4 rounded-sm border flex gap-4 ${isMalicious ? 'bg-threat-red/10 border-threat-red/30' :
-          isSuspicious ? 'bg-threat-amber/10 border-threat-amber/30' :
-            'bg-signal-teal/10 border-signal-teal/30'
-        }`}>
-        <div className={`p-2 rounded-sm h-fit ${isMalicious ? 'bg-threat-red/20 text-threat-red' :
-            isSuspicious ? 'bg-threat-amber/20 text-threat-amber' :
-              'bg-signal-teal/20 text-signal-teal'
-          }`}>
-          {isSafe ? <Info size={24} /> : <ShieldAlert size={24} />}
-        </div>
-        <div>
-          <h3 className="font-bold text-lg mb-1">{analysis.category} Flow</h3>
-          {analysis.threat_type && (
-            <p className="text-sm font-medium mb-2">Threat Signature: {analysis.threat_type}</p>
-          )}
-          <p className="text-sm opacity-80 leading-relaxed">
-            {analysis.explanation || "No explanation provided."}
-          </p>
-        </div>
+    <div className="h-full flex flex-col bg-gray-900/50 rounded-lg border border-gray-800 overflow-hidden">
+      <div className="p-4 border-b border-gray-800 bg-gray-800/20">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Activity size={18} className="text-signal-teal" />
+          AI Insight & Explainability
+        </h3>
+        <p className="text-xs text-gray-400 mt-1">Model: {analysis.model_used}</p>
       </div>
 
-      {/* Confidence Score & Decay */}
-      <div className="bg-gray-800/30 p-4 rounded-lg border border-gray-700/50">
-        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Model Confidence</h4>
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${analysis.confidence > 0.8 ? 'bg-signal-teal' :
-                  analysis.confidence > 0.5 ? 'bg-threat-amber' : 'bg-threat-red'
-                }`}
-              style={{ width: `${analysis.confidence * 100}%` }}
-            ></div>
+      <div className="p-4 flex-1 overflow-auto space-y-6">
+        
+        {/* Threat Score Card */}
+        <div className={`p-4 rounded-lg border ${isMalicious ? 'bg-threat-red/5 border-threat-red/20' : isSuspicious ? 'bg-threat-amber/5 border-threat-amber/20' : 'bg-signal-teal/5 border-signal-teal/20'}`}>
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <div className="text-sm text-gray-400 uppercase tracking-wider mb-1">Threat Confidence</div>
+              <div className="text-3xl font-mono font-semibold">
+                {(analysis.threat_score * 100).toFixed(1)}%
+              </div>
+            </div>
+            {(isMalicious || isSuspicious) ? (
+              <ShieldAlert size={32} className={isMalicious ? 'text-threat-red' : 'text-threat-amber'} />
+            ) : (
+              <Info size={32} className="text-signal-teal" />
+            )}
           </div>
-          <span className="font-mono text-sm">{(analysis.confidence * 100).toFixed(1)}%</span>
+          <div className="text-sm mt-3 pt-3 border-t border-gray-800/50">
+            <span className="text-gray-400">Classification: </span>
+            <span className="font-medium text-gray-200">
+              {analysis.threat_type || 'Benign Baseline Traffic'}
+            </span>
+          </div>
         </div>
 
-        {analysis.confidence < 0.6 && (
-          <div className="mt-3 flex gap-2 items-start text-xs text-threat-amber/80 bg-threat-amber/10 p-2 rounded-sm border border-threat-amber/20">
-            <TrendingDown size={14} className="mt-0.5 flex-shrink-0" />
-            <p><strong>Confidence Decay Applied:</strong> This source IP has repeatedly exhibited similar anomalies without escalation. Threat score reduced to prevent false positive.</p>
+        {/* Feature Contributions (SHAP) */}
+        {analysis.feature_contributions && analysis.feature_contributions.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+              <TrendingDown size={16} /> Key Feature Contributions
+            </h4>
+            <div className="space-y-3">
+              {analysis.feature_contributions.map((feature, idx) => (
+                <div key={idx} className="bg-gray-800/30 p-3 rounded border border-gray-700/50">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-medium">{feature.feature_name}</span>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-threat-red/10 text-threat-red">
+                      +{(feature.contribution_score * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">{feature.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Packet Details */}
-      <div className="bg-gray-800/30 p-4 rounded-lg border border-gray-700/50">
-        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Extracted Features</h4>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div>
-            <dt className="text-gray-500">Source IP</dt>
-            <dd className="font-mono mt-1 text-cyan-300">{packet.source_ip}</dd>
+        {/* Natural Language Explanation */}
+        <div>
+          <h4 className="text-sm font-semibold text-gray-300 mb-2">Analysis Rationale</h4>
+          <p className="text-sm text-gray-400 leading-relaxed bg-gray-800/20 p-3 rounded border border-gray-800/50">
+            {analysis.explanation}
+          </p>
+        </div>
+
+        {/* Packet Details */}
+        <div>
+          <h4 className="text-sm font-semibold text-gray-300 mb-2">Raw Extracted Features</h4>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-gray-800/30 p-2 rounded">
+              <span className="text-gray-500 block text-xs mb-1">Protocol</span>
+              <span className="font-mono">{packet.protocol} {packet.flags !== '-' && `[${packet.flags}]`}</span>
+            </div>
+            <div className="bg-gray-800/30 p-2 rounded">
+              <span className="text-gray-500 block text-xs mb-1">Dest Port</span>
+              <span className="font-mono">{packet.dest_port}</span>
+            </div>
+            <div className="bg-gray-800/30 p-2 rounded">
+              <span className="text-gray-500 block text-xs mb-1">Size</span>
+              <span className="font-mono">{packet.packet_size} B</span>
+            </div>
+            <div className="bg-gray-800/30 p-2 rounded">
+              <span className="text-gray-500 block text-xs mb-1">Duration</span>
+              <span className="font-mono">{packet.flow_duration.toFixed(3)}s</span>
+            </div>
           </div>
-          <div>
-            <dt className="text-gray-500">Dest Port</dt>
-            <dd className="font-mono mt-1">{packet.dest_port}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Protocol</dt>
-            <dd className="font-mono mt-1">{packet.protocol}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Flags</dt>
-            <dd className="font-mono mt-1">{packet.flags}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Payload Size</dt>
-            <dd className="font-mono mt-1">{packet.packet_size} B</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Duration</dt>
-            <dd className="font-mono mt-1">{packet.flow_duration.toFixed(3)} s</dd>
-          </div>
-        </dl>
+        </div>
+
       </div>
     </div>
   );

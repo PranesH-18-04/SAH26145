@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Activity, ShieldAlert, Zap } from 'lucide-react';
 import { useWebSocket, Alert } from '../hooks/useWebSocket';
 import LiveTrafficTable from './LiveTrafficTable';
@@ -72,7 +72,7 @@ export default function Dashboard() {
         <div className="lg:col-span-1">
           <div className="glass-panel p-4 h-full min-h-[724px]">
             <h2 className="text-lg font-semibold mb-4">AI Insight & Explainability</h2>
-            <AIExplanationPanel selectedAlert={selectedAlert} />
+            <AIExplanationPanel alert={selectedAlert} />
           </div>
         </div>
       </div>

@@ -13,12 +13,11 @@ interface Props {
 export default function AnalyticsCharts({ alerts }: Props) {
   // Process data for charts
   const chartData = useMemo(() => {
-    // Group by minute (or 10 seconds for more lively chart in dev)
     const grouped: Record<string, { time: string, safe: number, suspicious: number, malicious: number, bandwidth: number }> = {};
 
     // Reverse to process chronologically
     [...alerts].reverse().forEach(alert => {
-      const date = new Date(alert.packet.timestamp);
+      const date = new Date(alert.packet.timestamp_epoch * 1000);
       // Group by 5 second intervals for demo purposes
       const timeKey = `${date.getHours()}:${date.getMinutes()}:${Math.floor(date.getSeconds() / 5) * 5}`;
 
@@ -53,13 +52,14 @@ export default function AnalyticsCharts({ alerts }: Props) {
           <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
             <XAxis dataKey="time" stroke="#9CA3AF" fontSize={10} tickMargin={5} />
-            <YAxis stroke="#9CA3AF" fontSize={10} />
+            <YAxis stroke="#9CA3AF" fontSize={10} allowDecimals={false} />
             <Tooltip
               contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', borderRadius: '8px' }}
               itemStyle={{ fontSize: '12px' }}
             />
-            <Line type="monotone" dataKey="malicious" stroke="#ff5252" strokeWidth={2} dot={false} isAnimationActive={false} />
-            <Line type="monotone" dataKey="suspicious" stroke="#ffda79" strokeWidth={2} dot={false} isAnimationActive={false} />
+            {/* Using step function for discrete event data instead of smooth curves */}
+            <Line type="stepAfter" dataKey="malicious" stroke="#ff5252" strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line type="stepAfter" dataKey="suspicious" stroke="#ffda79" strokeWidth={2} dot={false} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
