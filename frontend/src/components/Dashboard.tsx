@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, ShieldAlert, Zap } from 'lucide-react';
+import { Activity, ShieldAlert } from 'lucide-react';
 import { useWebSocket, Alert } from '../hooks/useWebSocket';
 import LiveTrafficTable from './LiveTrafficTable';
 import AIExplanationPanel from './AIExplanationPanel';

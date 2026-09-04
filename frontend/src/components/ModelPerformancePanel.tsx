@@ -1,4 +1,4 @@
-import { Activity, ShieldCheck, Target, Crosshair } from 'lucide-react';
+import { Target } from 'lucide-react';
 
 export default function ModelPerformancePanel() {
   return (

@@ -59,10 +59,12 @@ export function useWebSocket(url: string, httpUrl: string) {
           const parsedHistory = data.map((row: any) => ({
             id: row.id,
             packet: {
+              id: row.id,
               timestamp_epoch: row.timestamp_epoch,
               timestamp_formatted: row.timestamp_formatted,
               source_ip: row.source_ip,
               dest_ip: row.dest_ip,
+              source_port: 0,
               dest_port: row.dest_port,
               protocol: row.protocol,
               packet_size: row.packet_size,
@@ -70,15 +72,17 @@ export function useWebSocket(url: string, httpUrl: string) {
               flags: "-"
             },
             analysis: {
+              packet_id: row.id,
               threat_score: row.threat_score,
               severity: row.severity,
               category: row.category,
               threat_type: row.threat_type,
               explanation: row.explanation,
+              model_used: "Random Forest Classifier + Isolation Forest Hybrid",
               feature_contributions: []
             },
             acknowledged: false,
-            status: 'NEW',
+            status: 'NEW' as 'NEW',
             audit_trail: []
           }));
           setAlerts(parsedHistory);

@@ -1,6 +1,6 @@
 import { Alert } from '../hooks/useWebSocket';
 import { AlertTriangle, ShieldCheck, HelpCircle, Info } from 'lucide-react';
-import { useState } from 'react';
+
 
 interface Props {
   alerts: Alert[];
