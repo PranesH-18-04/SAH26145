@@ -85,8 +85,32 @@ def generate_mock_packet() -> dict:
 
 async def traffic_generator():
     """Background task to generate traffic and stream alerts."""
+    counter = 0
+    
+    # Store a persistent anomalous signature to repeat for demo purposes
+    repeat_anomaly = {
+        "source_ip": "45.33.99.99",
+        "dest_ip": "10.0.1.100",
+        "dest_port": 443,
+        "protocol": "TCP",
+        "packet_size": 18000,
+        "flow_duration": 12.0,
+        "flags": "ACK"
+    }
+
     while True:
-        packet_dict = generate_mock_packet()
+        counter += 1
+        
+        # Every 4th packet, inject the identical anomaly to demonstrate confidence decay
+        if counter % 4 == 0:
+            packet_dict = repeat_anomaly.copy()
+            epoch = time.time()
+            packet_dict["id"] = str(uuid.uuid4())
+            packet_dict["timestamp_epoch"] = epoch
+            packet_dict["timestamp_formatted"] = datetime.fromtimestamp(epoch).strftime("%H:%M:%S.%f")[:-3]
+            packet_dict["source_port"] = random.randint(1024, 65535)
+        else:
+            packet_dict = generate_mock_packet()
         
         # Analyze packet through ML Engine
         analysis_result = ml_engine.analyze_packet(packet_dict)
@@ -95,6 +119,10 @@ async def traffic_generator():
         analysis_obj = ThreatAnalysis(
             packet_id=packet_dict['id'],
             threat_score=analysis_result['threat_score'],
+            raw_threat_score=analysis_result['raw_threat_score'],
+            decay_factor=analysis_result['decay_factor'],
+            occurrence_count=analysis_result['occurrence_count'],
+            signature=analysis_result['signature'],
             severity=analysis_result['severity'],
             category=analysis_result['category'],
             threat_type=analysis_result['threat_type'],
@@ -112,4 +140,4 @@ async def traffic_generator():
         save_alert(alert_obj.model_dump())
         
         await manager.broadcast(alert_obj.model_dump_json())
-        await asyncio.sleep(random.uniform(0.2, 1.5))
+        await asyncio.sleep(random.uniform(0.5, 2.0))

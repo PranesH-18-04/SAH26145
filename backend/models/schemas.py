@@ -35,6 +35,10 @@ class FeatureContribution(BaseModel):
 class ThreatAnalysis(BaseModel):
     packet_id: str
     threat_score: float
+    raw_threat_score: float
+    decay_factor: float
+    occurrence_count: int
+    signature: str
     severity: SeverityLevel
     category: str
     threat_type: Optional[str] = None

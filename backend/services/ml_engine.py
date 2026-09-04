@@ -30,34 +30,38 @@ class MLEngine:
 
         # Confidence-Decay Mechanism State
         self.anomaly_history: Dict[str, list] = {}
-        self.decay_factor = 0.85 
+        self.decay_lambda = 0.25 # Exponential decay rate
 
-    def _update_anomaly_history(self, source_ip: str, timestamp: float, is_malicious: bool):
-        if source_ip not in self.anomaly_history:
-            self.anomaly_history[source_ip] = []
+    def _get_signature(self, packet_dict: dict, threat_type: str) -> str:
+        source_ip = packet_dict.get('source_ip', 'unknown')
+        dest_port = packet_dict.get('dest_port', 0)
+        return f"{source_ip}:{dest_port}:{threat_type}"
+
+    def _update_and_get_occurrence(self, signature: str, timestamp: float) -> int:
+        if signature not in self.anomaly_history:
+            self.anomaly_history[signature] = []
         
+        # Keep anomalies from the last 10 minutes (600 seconds)
         current_time = time.time()
-        self.anomaly_history[source_ip] = [
-            record for record in self.anomaly_history[source_ip] 
-            if current_time - record['time'] < 600
+        self.anomaly_history[signature] = [
+            t for t in self.anomaly_history[signature] 
+            if current_time - t < 600
         ]
         
-        self.anomaly_history[source_ip].append({
-            'time': timestamp,
-            'is_malicious': is_malicious
-        })
+        self.anomaly_history[signature].append(timestamp)
+        return len(self.anomaly_history[signature])
 
-    def _calculate_confidence_decay(self, source_ip: str, base_confidence: float) -> float:
-        history = self.anomaly_history.get(source_ip, [])
-        if not history:
+    def _calculate_confidence_decay(self, base_confidence: float, occurrence_count: int) -> float:
+        """
+        Calculates exponential frequency decay: C_n = C_0 * exp(-lambda * max(0, n-1))
+        """
+        if occurrence_count <= 1:
             return base_confidence
             
-        recent_anomalies = len(history)
-        if recent_anomalies > 5:
-            decay_multiplier = max(0.3, self.decay_factor ** (recent_anomalies - 5))
-            return base_confidence * decay_multiplier
-            
-        return base_confidence
+        import math
+        # Decay applies to repeated occurrences (n-1)
+        decay_factor = math.exp(-self.decay_lambda * (occurrence_count - 1))
+        return base_confidence * decay_factor
 
     def _generate_explanation(self, category: str, threat_type: str, packet: dict) -> str:
         if category == "Safe":
@@ -111,6 +115,10 @@ class MLEngine:
         if self.rf_clf is None:
             return {
                 "threat_score": 0.1,
+                "raw_threat_score": 0.1,
+                "decay_factor": 1.0,
+                "occurrence_count": 1,
+                "signature": "unknown",
                 "severity": "LOG_ONLY",
                 "category": "Safe",
                 "threat_type": None,
@@ -129,7 +137,6 @@ class MLEngine:
         threat_type_str = self.label_map[predicted_class_idx]
         
         if threat_type_str == "Safe":
-            # If Random Forest says safe, but Isolation Forest strongly disagrees
             if iso_pred == -1:
                 base_threat_score = 0.55
                 threat_type_str = "Unknown Anomaly"
@@ -139,8 +146,16 @@ class MLEngine:
         else:
             base_threat_score = base_confidence
         
-        # Apply Confidence-Decay
-        final_confidence = self._calculate_confidence_decay(packet_dict.get('source_ip', ''), base_threat_score)
+        # Determine Signature and Update History (Only for non-safe bases)
+        signature = self._get_signature(packet_dict, str(threat_type_str))
+        occurrence_count = 1
+        final_confidence = base_threat_score
+        
+        if threat_type_str is not None:
+            occurrence_count = self._update_and_get_occurrence(signature, time.time())
+            final_confidence = self._calculate_confidence_decay(base_threat_score, occurrence_count)
+        
+        decay_factor = final_confidence / base_threat_score if base_threat_score > 0 else 1.0
         
         # Strict Threshold Enforcement
         if final_confidence < 0.50:
@@ -157,14 +172,11 @@ class MLEngine:
             severity = "CRITICAL"
             category = "Malicious"
             
-        # Update history
-        self._update_anomaly_history(packet_dict.get('source_ip', ''), time.time(), category == "Malicious")
-        
         # Generate Explanation
         explanation = self._generate_explanation(category, threat_type_str, packet_dict)
         
         if final_confidence < base_threat_score:
-            explanation += f"\n\n[Confidence Decay Triggered] Alert suppressed: repeated anomalies detected from {packet_dict.get('source_ip')}. Confidence decayed from {base_threat_score*100:.1f}% to {final_confidence*100:.1f}%."
+            explanation += f"\n\n[Confidence Decay Triggered] Alert suppressed: repeated anomalies detected for signature {signature}. Confidence decayed from {base_threat_score*100:.1f}% to {final_confidence*100:.1f}%."
 
         # Calculate Feature Contributions (SHAP proxy)
         feature_contributions = []
@@ -184,6 +196,10 @@ class MLEngine:
 
         return {
             "threat_score": final_confidence,
+            "raw_threat_score": base_threat_score,
+            "decay_factor": decay_factor,
+            "occurrence_count": occurrence_count,
+            "signature": signature,
             "severity": severity,
             "category": category,
             "threat_type": threat_type_str,
