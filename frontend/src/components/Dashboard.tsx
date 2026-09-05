@@ -12,9 +12,6 @@ export default function Dashboard() {
 <<<<<<< HEAD
   const httpUrl = import.meta.env.VITE_API_URL.replace(/^ws/, "http");
   const { alerts, isConnected } = useWebSocket(`${wsUrl}/ws/traffic`, httpUrl);
-=======
-  const { alerts, isConnected } = useWebSocket(`${wsUrl}/ws/traffic`);
->>>>>>> fixes-phase-4
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   // Statistics
