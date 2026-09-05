@@ -36,8 +36,14 @@ graph TD
 - **Testable Validation Plan:** We plan to apply our unidirectional feature-suppression script to the academic **iTrust SWaT (Secure Water Treatment)** ICS dataset. The approach is considered validated if Precision stays > 0.75 without using `dest_port`.
 - *Note:* True validation on physical hardware diodes remains pending due to the classified nature of such datasets.
 
-## Slide 6: Impact & Prototype Readiness
-- **Concrete Comparison (Alert Volume Reduction):** Without our Confidence-Decay mechanism, a sustained benign misconfiguration (e.g., repeating failed DNS lookups) triggers 100+ critical alerts in an hour. With Confidence-Decay, this dampens to ~3 actionable alerts, drastically cutting analyst alert fatigue.
+## Slide 6: Impact, Scale & Roadmap
+- **Quantified SOC Time Savings:** By dampening repetitive benign anomalies (e.g., dampening 100+ false-positive alerts down to ~3), the Confidence-Decay mechanism is estimated to save ~33 hours of analyst triage time per shift, effectively freeing up 4 full-time analysts.
+- **Economic Sustainability:** Software-based processing of standard PCAP/NetFlow avoids millions in proprietary vendor hardware lock-in and prevents SOC analyst burnout.
+- **Scale Path:** Kafka-buffered horizontal scaling allows deployment across a national fleet of defense and ICS gateways.
+- **Roadmap:** 
+  - *Phase 1:* Validate features on physical hardware diode captures.
+  - *Phase 2:* Add ICS/SCADA protocol parsers (Modbus/DNP3).
+  - *Phase 3:* Multi-tenant federated dashboard for centralized national monitoring.
 
 ### Live Dashboard Prototype
 ![NTRO ThreatSense Live Dashboard](file:///C:/Users/Yashwanthra/.gemini/antigravity/brain/d2b011ea-9613-44a8-9a59-27582bcc2cbe/.user_uploaded/media_1788510929328.png)

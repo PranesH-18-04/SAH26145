@@ -21,6 +21,16 @@ graph TD
     F --> H[React / Vite SOC Dashboard]
 ```
 
+## Architecture Rationale (Technical Approach)
+The ML pipeline utilizes a deliberate hybrid ensemble:
+- **Random Forest (Supervised):** Handles the high-precision classification of known threat vectors (DDoS, Exfiltration, Tunneling). Random Forest was chosen because it creates highly non-linear decision boundaries resilient to the missing data of unidirectional links, while remaining inherently interpretable (essential for the Explainability Layer).
+- **Isolation Forest (Unsupervised):** Runs in parallel to catch zero-day deviations. If a novel tunneling method evades the Random Forest's training distribution, the Isolation Forest flags it purely based on its mathematical distance from the established benign baseline.
+
+## Prior Art & Differentiation (Novelty)
+Standard Intrusion Detection Systems (like Snort, Suricata, or academic models trained blindly on the CICIDS datasets) implicitly rely on **bidirectional flow states**. They look for incomplete SYN-ACK handshakes, bidirectional flow duration, or backward-packet payload sizes to confirm attacks. 
+When placed behind a hardware data diode, these tools suffer catastrophic false-positive rates because *every* flow appears incomplete. 
+**Our Differentiation:** Instead of fighting the lack of return traffic, our model exploits it. We engineered novel features—specifically `ack_completeness_ratio` and `retransmission_blindness_index`—that use the strict *absence* of adaptive protocol backoff as a primary mathematical signal. This paradigm shift allows the model to differentiate between a severed benign flow and a malicious blind tunnel, which off-the-shelf IDS software cannot do.
+
 ## Repository structure
 
 SAH26/
@@ -60,8 +70,7 @@ SAH26/
 
 ## What's implemented
 
-- Real trained ML pipeline (RandomForest + IsolationForest) on synthetic
-  labeled flow data — not rule-based mocks
+- Real trained ML pipeline (RandomForest + IsolationForest) on a unidirectional-simulated sample of the CSE-CIC-IDS2018 dataset — no synthetic generation or rule-based mocks
 - Explainability layer generating plain-language reasons and SHAP-style contributions for each alert
 - Confidence-decay logic to dampen repeated benign anomalies over time
 - PCAP Ingestion Endpoint via `scapy` for real packet analysis
