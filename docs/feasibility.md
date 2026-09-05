@@ -5,7 +5,10 @@ This document outlines the deployment feasibility of the AI Threat Detection Sys
 ## Unidirectional Infrastructure Integration
 The system architecture strictly adheres to a unidirectional data flow requirement:
 - **Ingestion Mechanisms:** Network traffic from a mirrored TAP or SPAN port is passed through a hardware data diode (e.g., Fox-IT, Owl Cyber Defense). 
-- **Protocol Agnostic Intake:** The backend can ingest continuous PCAP streams via a network capture library (like `pyshark` or `scapy`) or accept NetFlow/IPFIX logs, extracting exactly the 4 required features: `dest_port`, `protocol_encoded`, `packet_size`, `flow_duration`.
+- **Protocol Agnostic Intake:** The backend ingests unidirectional flows extracting our custom one-way features.
+
+## Why Generic IDS Features Fail Here (The Unidirectional Edge)
+Most generic IDS models rely on bidirectional features (e.g., full TCP handshake states, backward packet lengths, bidirectional flow duration). In a data-diode deployment, the sensor only sees one side of the conversation. Our model actively exploits this constraint rather than ignoring it. By computing novel unidirectional features (e.g., `ack_completeness_ratio` and `half_duplex_burst_score`), we turn the lack of return traffic into an indicator of compromise. For example, a sustained one-directional burst with no protocol backoff (which normally occurs after packet loss in bidirectional TCP) is a highly specific fingerprint of covert exfiltration over a diode.
 
 ## Quantified Throughput Limits
 The current Python-based FastAPI architecture uses an asynchronous event loop combined with extremely fast `scikit-learn` model inference (Random Forest and Isolation Forest).

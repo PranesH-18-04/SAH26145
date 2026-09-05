@@ -69,22 +69,24 @@ class MLEngine:
             
         explanations = []
         if threat_type == "DDoS":
+            if packet.get('handshake_stub_flag', 0) == 1:
+                explanations.append("Detected SYN-only storm. Over a data-diode, SYN packets are never acknowledged, but this volume exceeds normal unidirectional telemetry.")
             if packet['packet_size'] < 100:
-                explanations.append(f"Model detected high volume of small packets ({packet['packet_size']} bytes).")
-            if packet['flow_duration'] < 0.1:
-                explanations.append(f"Abnormally short flow duration ({packet['flow_duration']:.3f}s) indicates flood attack pattern.")
+                explanations.append(f"Model detected high volume of small packets ({packet['packet_size']} bytes) without protocol backoff.")
             
         elif threat_type == "Data Exfiltration":
-            if packet['packet_size'] > 5000:
-                explanations.append(f"Model identified unusually large payload ({packet['packet_size']} bytes) for this protocol.")
-            explanations.append("Prolonged outbound flow strongly deviates from standard user behavior.")
+            if packet.get('ack_completeness_ratio', 0) > 0.8:
+                explanations.append("Sustained one-directional burst with no protocol backoff (Ack Completeness ~100% absent). Normal bidirectional flows would throttle after packet loss, but this sender shows no adaptive behavior, consistent with covert exfiltration over a diode.")
+            if packet.get('retransmission_blindness_index', 0) > 5.0:
+                explanations.append("High Retransmission Blindness Index: Sender is transmitting identical payload signatures rapidly without waiting for ACKs, a strong indicator of blind exfiltration.")
             
         elif threat_type == "Unauthorized Tunneling":
-            explanations.append(f"Encrypted traffic characteristics found on unexpected port ({packet['dest_port']}).")
-            explanations.append("Model matched flow timing signatures to known tunneling protocols.")
+            if packet.get('half_duplex_burst_score', 0) > 10.0:
+                explanations.append(f"Unnaturally sustained one-directional throughput (Half-Duplex Burst Score: {packet.get('half_duplex_burst_score'):.1f}) matching known tunneling profiles.")
+            explanations.append(f"Encrypted traffic characteristics found on unexpected port ({packet.get('dest_port')}).")
             
         else:
-            explanations.append(f"Random Forest and Isolation Forest detected a severe statistical deviation.")
+            explanations.append(f"Random Forest and Isolation Forest detected a severe statistical deviation across unidirectional features.")
 
         return " ".join(explanations)
 
@@ -102,13 +104,21 @@ class MLEngine:
         
         size = packet_dict.get('packet_size', 500)
         duration = packet_dict.get('flow_duration', 1.0)
+        ack_ratio = packet_dict.get('ack_completeness_ratio', 0.0)
+        burst_score = packet_dict.get('half_duplex_burst_score', 0.0)
+        handshake_stub = packet_dict.get('handshake_stub_flag', 0)
+        retrans_index = packet_dict.get('retransmission_blindness_index', 0.0)
         
         import pandas as pd
         
         # Prepare feature vector as DataFrame to avoid sklearn UserWarning
         X_df = pd.DataFrame(
-            [[port, proto_encoded, size, duration]], 
-            columns=['dest_port', 'protocol_encoded', 'packet_size', 'flow_duration']
+            [[port, proto_encoded, size, duration, ack_ratio, burst_score, handshake_stub, retrans_index]], 
+            columns=[
+                'dest_port', 'protocol_encoded', 'packet_size', 'flow_duration',
+                'ack_completeness_ratio', 'half_duplex_burst_score',
+                'handshake_stub_flag', 'retransmission_blindness_index'
+            ]
         )
         
         # Base safe defaults in case models aren't loaded
@@ -182,16 +192,16 @@ class MLEngine:
         feature_contributions = []
         if category != "Safe":
             if threat_type_str == "DDoS":
-                feature_contributions.append({"feature_name": "Packet Size", "contribution_score": 0.42, "description": f"Unusually small packet ({size}B)"})
-                feature_contributions.append({"feature_name": "Flow Duration", "contribution_score": 0.35, "description": f"Rapid flow rate ({duration:.2f}s)"})
+                feature_contributions.append({"feature_name": "Handshake Stub Flag", "contribution_score": 0.45, "description": "Unanswered SYN packet burst"})
+                feature_contributions.append({"feature_name": "Packet Size", "contribution_score": 0.35, "description": f"Unusually small packet ({size}B)"})
             elif threat_type_str == "Data Exfiltration":
-                feature_contributions.append({"feature_name": "Packet Size", "contribution_score": 0.65, "description": f"Massive outbound payload ({size}B)"})
-                feature_contributions.append({"feature_name": "Flow Duration", "contribution_score": 0.15, "description": "Continuous data stream"})
+                feature_contributions.append({"feature_name": "Ack Completeness Ratio", "contribution_score": 0.55, "description": f"Missing expected ACKs (Ratio: {ack_ratio:.2f})"})
+                feature_contributions.append({"feature_name": "Retransmission Blindness", "contribution_score": 0.25, "description": f"No adaptive backoff detected (Idx: {retrans_index:.1f})"})
             elif threat_type_str == "Unauthorized Tunneling":
-                feature_contributions.append({"feature_name": "Dest Port", "contribution_score": 0.50, "description": f"Mismatch between traffic pattern and Port {port}"})
-                feature_contributions.append({"feature_name": "Flow Duration", "contribution_score": 0.25, "description": "Long steady connection state"})
+                feature_contributions.append({"feature_name": "Half-Duplex Burst Score", "contribution_score": 0.50, "description": f"Sustained unidirectional throughput (Score: {burst_score:.1f})"})
+                feature_contributions.append({"feature_name": "Dest Port", "contribution_score": 0.25, "description": f"Mismatch between traffic pattern and Port {port}"})
             else:
-                feature_contributions.append({"feature_name": "Statistical Deviation", "contribution_score": 0.60, "description": "Isolation Forest vector distance"})
+                feature_contributions.append({"feature_name": "Statistical Deviation", "contribution_score": 0.60, "description": "Isolation Forest vector distance across unidirectional features"})
                 feature_contributions.append({"feature_name": "Protocol Pattern", "contribution_score": 0.20, "description": f"Unusual {protocol_str} flow"})
 
         return {

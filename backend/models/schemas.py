@@ -26,6 +26,10 @@ class TrafficPacket(BaseModel):
     packet_size: int
     flow_duration: float
     flags: str
+    ack_completeness_ratio: float
+    half_duplex_burst_score: float
+    handshake_stub_flag: int
+    retransmission_blindness_index: float
 
 class FeatureContribution(BaseModel):
     feature_name: str

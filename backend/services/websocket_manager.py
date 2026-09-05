@@ -69,6 +69,20 @@ def generate_mock_packet() -> dict:
     # Format: HH:MM:SS.mmm
     formatted_time = datetime.fromtimestamp(epoch).strftime("%H:%M:%S.%f")[:-3]
         
+    ack_ratio = 0.0
+    if protocol == "TCP" and "ACK" not in flags:
+        ack_ratio = random.uniform(0.8, 1.0)
+    elif protocol == "TCP":
+        ack_ratio = random.uniform(0.1, 0.4)
+        
+    burst_score = (packet_size / max(flow_duration, 0.01)) / 1000.0
+    
+    handshake_stub = 1 if flags == "SYN" else 0
+    
+    retrans_index = random.uniform(0.0, 2.0)
+    if packet_size > 5000:
+        retrans_index = random.uniform(5.0, 15.0)
+
     return {
         "id": str(uuid.uuid4()),
         "timestamp_epoch": epoch,
@@ -80,7 +94,11 @@ def generate_mock_packet() -> dict:
         "protocol": protocol,
         "packet_size": packet_size,
         "flow_duration": flow_duration,
-        "flags": flags
+        "flags": flags,
+        "ack_completeness_ratio": ack_ratio,
+        "half_duplex_burst_score": burst_score,
+        "handshake_stub_flag": handshake_stub,
+        "retransmission_blindness_index": retrans_index
     }
 
 async def traffic_generator():
@@ -95,7 +113,11 @@ async def traffic_generator():
         "protocol": "TCP",
         "packet_size": 18000,
         "flow_duration": 12.0,
-        "flags": "ACK"
+        "flags": "ACK",
+        "ack_completeness_ratio": 0.95,
+        "half_duplex_burst_score": 25.5,
+        "handshake_stub_flag": 0,
+        "retransmission_blindness_index": 12.4
     }
 
     while True:

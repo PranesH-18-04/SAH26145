@@ -33,6 +33,10 @@ export interface TrafficPacket {
   packet_size: number;
   flow_duration: number;
   flags: string;
+  ack_completeness_ratio: number;
+  half_duplex_burst_score: number;
+  handshake_stub_flag: number;
+  retransmission_blindness_index: number;
 }
 
 export interface AuditLogEntry {
@@ -73,7 +77,11 @@ export function useWebSocket(url: string, httpUrl: string) {
               protocol: row.protocol,
               packet_size: row.packet_size,
               flow_duration: 0,
-              flags: "-"
+              flags: "-",
+              ack_completeness_ratio: row.ack_completeness_ratio || 0,
+              half_duplex_burst_score: row.half_duplex_burst_score || 0,
+              handshake_stub_flag: row.handshake_stub_flag || 0,
+              retransmission_blindness_index: row.retransmission_blindness_index || 0
             },
             analysis: {
               packet_id: row.id,
