@@ -42,15 +42,33 @@ async def simulate_attack(attack_type: str = Body(..., embed=True)):
         packet_dict["packet_size"] = 64
         packet_dict["flow_duration"] = 0.05
         packet_dict["flags"] = "SYN"
+        packet_dict["ack_completeness_ratio"] = 0.95
+        packet_dict["half_duplex_burst_score"] = 1.5
+        packet_dict["handshake_stub_flag"] = 1
+        packet_dict["retransmission_blindness_index"] = 0.85
     elif attack_type == "Exfiltration":
         packet_dict["packet_size"] = 45000
         packet_dict["flow_duration"] = 25.0
+        packet_dict["ack_completeness_ratio"] = 0.99
+        packet_dict["half_duplex_burst_score"] = 2.5
+        packet_dict["handshake_stub_flag"] = 0
+        packet_dict["retransmission_blindness_index"] = 0.92
     elif attack_type == "Tunneling":
         packet_dict["dest_port"] = 53
         packet_dict["protocol"] = "UDP"
         packet_dict["flags"] = "-"
         packet_dict["flow_duration"] = 60.0
         packet_dict["packet_size"] = 800
+        packet_dict["ack_completeness_ratio"] = 0.90
+        packet_dict["half_duplex_burst_score"] = 1.2
+        packet_dict["handshake_stub_flag"] = 0
+        packet_dict["retransmission_blindness_index"] = 0.75
+    else:
+        # Default benign values
+        packet_dict["ack_completeness_ratio"] = 0.1
+        packet_dict["half_duplex_burst_score"] = 0.2
+        packet_dict["handshake_stub_flag"] = 0
+        packet_dict["retransmission_blindness_index"] = 0.1
 
     analysis_result = ml_engine.analyze_packet(packet_dict)
     
@@ -58,6 +76,10 @@ async def simulate_attack(attack_type: str = Body(..., embed=True)):
     analysis_obj = ThreatAnalysis(
         packet_id=packet_dict['id'],
         threat_score=analysis_result['threat_score'],
+        raw_threat_score=analysis_result['raw_threat_score'],
+        decay_factor=analysis_result['decay_factor'],
+        occurrence_count=analysis_result['occurrence_count'],
+        signature=analysis_result['signature'],
         severity=analysis_result['severity'],
         category=analysis_result['category'],
         threat_type=analysis_result['threat_type'],
