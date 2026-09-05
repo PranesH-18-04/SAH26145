@@ -17,10 +17,10 @@ def get_mapped_data():
     df = get_training_data()
     
     label_map = {
-        'Safe': 0,
+        'Benign': 0,
         'DDoS': 1,
-        'Data Exfiltration': 2,
-        'Unauthorized Tunneling': 3
+        'Exfil': 2,
+        'Tunnel': 3
     }
     
     y = df['Label'].map(label_map).values
