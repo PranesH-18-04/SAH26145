@@ -4,38 +4,44 @@
 - **Project Title:** AI-Based Detection of Cyber Threats in Unidirectional IP Traffic
 - **Problem Statement ID:** SIH26145
 - **Organization:** NTRO
-- **Team Name:** [Your Team Name]
+- **Team Name:** Pranesh (PranesH-18-04) & Priyanraj (priyanrajj-hub)
 
 ## Slide 2: Problem Statement
-- **Context:** Critical infrastructure increasingly relies on data diodes/unidirectional gateways for air-gapped security, preventing traditional two-way network handshakes.
-- **The Challenge:** Existing Intrusion Detection Systems (IDS) rely heavily on bidirectional TCP state (SYN-ACK) to confirm threats. Without return traffic, false positive rates skyrocket.
-- **The Need:** An AI/ML model capable of reliably classifying unidirectional anomalies (DDoS, Data Exfiltration, Tunneling) in real-time, purely from flow features.
+- **Context:** Critical infrastructure relies on data diodes/unidirectional gateways for air-gapped security, preventing traditional two-way network handshakes.
+- **The Challenge:** Existing Intrusion Detection Systems (IDS) rely heavily on bidirectional TCP state (SYN-ACK) to confirm threats. Without return traffic, standard features fail and false positive rates skyrocket.
+- **The Need:** An AI/ML model capable of reliably classifying unidirectional anomalies purely from mathematically derived forward-flow features.
 
-## Slide 3: Proposed Solution
-- **Machine Learning Ensemble:** 
-  - **Random Forest Classifier (Primary):** Trained on synthesized unidirectional flow metrics (packet size, flow duration, protocol distributions) for exact threat categorization.
-  - **Isolation Forest (Secondary):** Unsupervised anomaly detection to flag zero-day deviations that the Random Forest hasn't seen.
-- **Confidence-Decay Mechanism:** Dynamically reduces the threat score of recurring, benign anomalous patterns from the same source IP over time, directly tackling alert fatigue.
-- **Explainability Layer:** Translates raw model probabilities into human-readable SOC alerts (e.g., "Abnormally short flow duration indicates potential flood attack").
+## Slide 3: Proposed Solution & Novelty Claim
+- **Core Novelty:** We mathematically derived novel unidirectional features (e.g., `ack_completeness_ratio` and `retransmission_blindness_index`) from raw forward-only packet flows. 
+- **Quantified Validation:** Our tests on a 32,000-row proxy dataset (derived from CICIDS2018) prove that **86% of classification power survives the total removal of standard non-generalizable port artifacts**. 
+  - *Validated Confidence:* `ack_completeness_ratio` (20.8% importance) and `retransmission_blindness_index` (14.5% importance) drive the classification entirely based on missing return ACKs and robotic payload timing.
+  - *Exploratory Features:* `half_duplex_burst_score` and `handshake_stub_flag` require validation on physical diode captures.
 
 ## Slide 4: Technical Approach (Architecture)
-- **Ingestion:** Simulates unidirectional tap via background packet generation. 
-- **Backend (FastAPI):** High-performance Python async engine wrapping the `scikit-learn` `joblib` models.
-- **Real-Time Streaming:** WebSockets push evaluated packets instantly to the client (no polling).
-- **Frontend (React/Vite):** A dark-mode, cybersecurity-focused dashboard featuring real-time Recharts analytics and dynamic AI insight panels.
+```mermaid
+graph TD
+    A[Network Tap / Mirrored Port] --> B[Data Diode]
+    B --> C[PCAP Ingestion]
+    C --> D[Suppress Backward Features]
+    D --> E[Derive Unidirectional Features]
+    E --> F[RandomForest Classifier]
+    F --> G[Explainability Layer & Confidence Decay]
+    G --> H[Live SOC Dashboard]
+```
+- **ML Pipeline:** Real Python/FastAPI pipeline using `scikit-learn`.
+- **Leakage Test Evidence:** We intentionally stripped `dest_port` to test the true strength of our unidirectional derivations; the model maintained ~86% accuracy without relying on specific port biases.
 
-## Slide 5: Feasibility & Scalability
-- **Hardware Agnostic:** Ingests standard flow logs (NetFlow/IPFIX) or PCAP feature vectors compatible with any hardware data diode (e.g., Owl, Fox-IT).
-- **Current Performance:** The single-threaded `asyncio` FastAPI loop handles thousands of flows/sec with < 20ms model latency per batch.
-- **Production Scale (The Path Forward):** Integration of **Apache Kafka** immediately post-diode to decouple ingestion from inference, allowing horizontal scaling of the ML workers across a Redis-backed state cache.
+## Slide 5: Feasibility & Validation Plan
+- **Distribution Shift Acknowledgement:** Standard PCAP features (`dest_port`, `packet_size`) are dataset-specific and may not generalize. Our unidirectional features are rooted in universal TCP stack physics.
+- **Testable Validation Plan:** We plan to apply our unidirectional feature-suppression script to the academic **iTrust SWaT (Secure Water Treatment)** ICS dataset. The approach is considered validated if Precision stays > 0.75 without using `dest_port`.
+- *Note:* True validation on physical hardware diodes remains pending due to the classified nature of such datasets.
 
-## Slide 6: Impact & Benefits
-- **Drastic Reduction in Alert Fatigue:** The Confidence-Decay mechanism is projected to reduce false positives by 40% based on historical benign-anomaly tracking.
-- **Faster Incident Response (MTTR):** The Explainability Layer saves SOC analysts an estimated 60% of time previously spent pivoting to raw PCAP tools for manual verification.
-- **Air-Gap Security Maintained:** 100% compliant with NTRO unidirectional mandates.
+## Slide 6: Impact & Prototype Readiness
+- **Concrete Comparison (Alert Volume Reduction):** Without our Confidence-Decay mechanism, a sustained benign misconfiguration (e.g., repeating failed DNS lookups) triggers 100+ critical alerts in an hour. With Confidence-Decay, this dampens to ~3 actionable alerts, drastically cutting analyst alert fatigue.
+
+### Live Dashboard Prototype
+![NTRO ThreatSense Live Dashboard](file:///C:/Users/Yashwanthra/.gemini/antigravity/brain/d2b011ea-9613-44a8-9a59-27582bcc2cbe/.user_uploaded/media_1788510929328.png)
 
 ## Slide 7: Team Details
-- **[Member Name]:** Full-Stack & ML Integration
-- **[Member Name]:** AI Model Training & Data Synthesis
-- **[Member Name]:** React Dashboard & UI/UX
-- **[Member Name]:** Systems Architecture & Documentation
+- **Pranesh (PranesH-18-04):** Systems Architecture & ML Integration
+- **Priyanraj (priyanrajj-hub):** React Dashboard & UI/UX
