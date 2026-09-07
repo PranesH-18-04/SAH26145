@@ -62,7 +62,9 @@ class MLEngine:
         # Decay applies to repeated occurrences (n-1)
         decay_factor = math.exp(-self.decay_lambda * (occurrence_count - 1))
         return base_confidence * decay_factor
-
+    # Explanation generation is deterministic and rule-based (feature-threshold driven), not an LLM call.
+    # This is intentional: it's auditable, has zero external API dependency/cost, and every explanation
+    # traces directly to the triggering feature — important for a security tool where analysts need to trust *why* something was flagged.
     def _generate_explanation(self, category: str, threat_type: str, packet: dict) -> str:
         if category == "Safe":
             return "Traffic aligns with historical baseline. Model confirms normal behavior."

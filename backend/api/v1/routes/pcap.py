@@ -65,7 +65,11 @@ async def upload_pcap(file: UploadFile = File(...)):
                 "protocol": protocol,
                 "packet_size": packet_size,
                 "flow_duration": flow_duration,
-                "flags": flags
+                "flags": flags,
+                "ack_completeness_ratio": 0.0,
+                "half_duplex_burst_score": 0.0,
+                "handshake_stub_flag": 0,
+                "retransmission_blindness_index": 0.0
             }
             
             analysis_result = ml_engine.analyze_packet(packet_dict)
@@ -74,6 +78,10 @@ async def upload_pcap(file: UploadFile = File(...)):
             analysis_obj = ThreatAnalysis(
                 packet_id=packet_dict['id'],
                 threat_score=analysis_result['threat_score'],
+                raw_threat_score=analysis_result['raw_threat_score'],
+                decay_factor=analysis_result['decay_factor'],
+                occurrence_count=analysis_result['occurrence_count'],
+                signature=analysis_result['signature'],
                 severity=analysis_result['severity'],
                 category=analysis_result['category'],
                 threat_type=analysis_result['threat_type'],
