@@ -12,13 +12,13 @@ and confidence-decay mechanism to reduce false positives over time.
 
 ```mermaid
 graph TD
-    A[Network Tap / Mirrored Port] --> B[Data Diode]
-    B --> C[PCAP Ingestion & Feature Extractor (Scapy)]
-    C --> D[ML Engine: RandomForest + IsolationForest]
-    D --> E[Explainability Layer & Confidence Decay]
-    E --> F[FastAPI REST & WebSocket Server]
-    F --> G[SQLite Persistence]
-    F --> H[React / Vite SOC Dashboard]
+    A["Network Tap / Mirrored Port"] --> B["Data Diode"]
+    B --> C["PCAP Ingestion & Feature Extractor (Scapy)"]
+    C --> D["ML Engine: RandomForest + IsolationForest"]
+    D --> E["Explainability Layer & Confidence Decay"]
+    E --> F["FastAPI REST & WebSocket Server"]
+    F --> G["SQLite Persistence"]
+    F --> H["React / Vite SOC Dashboard"]
 ```
 
 ## Architecture Rationale (Technical Approach)
@@ -131,7 +131,3 @@ traffic replay to see live alerts populate the dashboard.
 - [`docs/pitch-deck-outline.md`](docs/pitch-deck-outline.md) — slide-ready
   outline matching SIH's standard PPT format
 
-## Team
-
-- Pranesh (PranesH-18-04)
-- Priyanraj (priyanrajj-hub)
