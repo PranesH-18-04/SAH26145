@@ -94,6 +94,11 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
+# (Optional) Add your Gemini API key for enriched AI insights
+# Get a key from Google AI Studio and add it to backend/.env:
+# GEMINI_API_KEY=your_api_key_here
+cp .env.example .env
+
 # train the model (only needed once, or to retrain)
 python scripts/train_model.py
 
@@ -128,6 +133,6 @@ traffic replay to see live alerts populate the dashboard.
   savings, scalability reasoning
 - [`docs/model_performance.md`](docs/model_performance.md) — real evaluated
   precision/recall/F1 and confusion matrix
+- [`docs/ai_insight.md`](docs/ai_insight.md) — explains the Gemini API integration and fallback architecture
 - [`docs/pitch-deck-outline.md`](docs/pitch-deck-outline.md) — slide-ready
   outline matching SIH's standard PPT format
-

@@ -3,7 +3,11 @@ import json
 import os
 from contextlib import contextmanager
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '../threat_data.db')
+if os.environ.get('VERCEL'):
+    # Vercel serverless environments have a read-only filesystem except for /tmp
+    DB_PATH = '/tmp/threat_data.db'
+else:
+    DB_PATH = os.path.join(os.path.dirname(__file__), '../threat_data.db')
 
 def init_db():
     with get_db() as conn:
@@ -30,14 +34,21 @@ def init_db():
         ''')
         conn.commit()
 
+# Global connection cache for Serverless environments
+_global_conn = None
+
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    global _global_conn
+    if _global_conn is None:
+        _global_conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        _global_conn.row_factory = sqlite3.Row
     try:
-        yield conn
-    finally:
-        conn.close()
+        yield _global_conn
+    except Exception:
+        # If an error occurs, we might want to close and reset the connection
+        # but for this simple setup we'll let the caller handle it.
+        raise
 
 def save_alert(alert_dict: dict):
     pkt = alert_dict['packet']
@@ -59,5 +70,11 @@ def get_history(limit: int = 100):
     with get_db() as conn:
         cursor = conn.execute('SELECT * FROM alerts ORDER BY timestamp_epoch DESC LIMIT ?', (limit,))
         return [dict(row) for row in cursor.fetchall()]
+
+def get_alert_by_id(alert_id: str):
+    with get_db() as conn:
+        cursor = conn.execute('SELECT * FROM alerts WHERE id = ?', (alert_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 init_db()

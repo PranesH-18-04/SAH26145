@@ -1,11 +1,43 @@
+import { useState, useEffect } from 'react';
 import { Alert } from '../hooks/useWebSocket';
-import { ShieldAlert, Info, TrendingDown, Target, Activity } from 'lucide-react';
+import { ShieldAlert, Info, TrendingDown, Target, Activity, Sparkles, Loader2 } from 'lucide-react';
 
 interface Props {
   alert: Alert | null;
 }
 
 export default function AIExplanationPanel({ alert }: Props) {
+  const [insightData, setInsightData] = useState<{insight: string, action: string, source: string} | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!alert) return;
+    setIsLoading(true);
+    setInsightData(null);
+    
+    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/^ws/, "http");
+    
+    fetch(`${apiUrl}/api/v1/alerts/${alert.id}/insight`)
+      .then(res => {
+        if (!res.ok) throw new Error("API response not ok");
+        return res.json();
+      })
+      .then(data => {
+        setInsightData(data);
+      })
+      .catch(err => {
+        console.error("Failed to fetch insight", err);
+        setInsightData({
+          insight: alert.analysis.explanation,
+          action: "Investigate source IP and review traffic logs.",
+          source: "rule-based"
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [alert?.id]);
+
   if (!alert) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900/50 rounded-lg border border-gray-800">
@@ -91,12 +123,41 @@ export default function AIExplanationPanel({ alert }: Props) {
           </div>
         )}
 
-        {/* Natural Language Explanation */}
+        {/* Natural Language Explanation (Gemini) */}
         <div>
-          <h4 className="text-sm font-semibold text-gray-300 mb-2">Analysis Rationale</h4>
-          <p className="text-sm text-gray-400 leading-relaxed bg-gray-800/20 p-3 rounded border border-gray-800/50 whitespace-pre-wrap">
-            {analysis.explanation}
-          </p>
+          <div className="flex justify-between items-end mb-2">
+            <h4 className="text-sm font-semibold text-gray-300">Analysis Rationale</h4>
+            {insightData?.source === 'gemini' && (
+               <span className="text-[10px] uppercase font-semibold text-purple-400 bg-purple-900/30 border border-purple-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                 <Sparkles size={10} /> Gemini Enriched
+               </span>
+            )}
+            {insightData?.source === 'rule-based' && (
+               <span className="text-[10px] uppercase font-semibold text-gray-400 bg-gray-800/50 border border-gray-700 px-2 py-0.5 rounded">
+                 Rule-Based
+               </span>
+            )}
+          </div>
+          
+          <div className="text-sm text-gray-400 leading-relaxed bg-gray-800/20 p-3 rounded border border-gray-800/50 whitespace-pre-wrap relative min-h-[80px]">
+            {isLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 size={24} className="text-signal-teal animate-spin" />
+              </div>
+            ) : insightData ? (
+              <div className="space-y-3">
+                <p>{insightData.insight}</p>
+                {insightData.action && (
+                  <div className="pt-2 border-t border-gray-700/50">
+                    <span className="text-gray-300 font-semibold block mb-1">Recommended Action:</span>
+                    <span className="text-threat-amber">{insightData.action}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p>{analysis.explanation}</p>
+            )}
+          </div>
         </div>
 
         {/* Packet Details */}
